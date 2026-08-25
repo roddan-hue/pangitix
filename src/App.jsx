@@ -23,6 +23,7 @@ const App = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [trendingMovies, setTrendingMovies] = useState([]);
+  const [selectedMovie, setSelectedMovie] = useState(null);
 
   // Debounce the search term to prevent making too many API Requests
   // by waiting for the user to stop typing for 500ms
@@ -120,13 +121,50 @@ const App = () => {
         ) : (
           <ul>
             {movieList.map((movie) => (
-              <MovieCard key={movie.id} movie={movie}/>
+              <MovieCard key={movie.id} movie={movie} onSelect={setSelectedMovie}/>
             ))}
           </ul>
 
         )}
 
       </section>
+
+      {selectedMovie && (
+        <div className="movie-modal" onClick={() => setSelectedMovie(null)}>
+          <div
+            className="movie-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="movie-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="movie-modal-close"
+              type="button"
+              onClick={() => setSelectedMovie(null)}
+              aria-label="Close movie details"
+            >
+              &times;
+            </button>
+            <img
+              src={selectedMovie.poster_path
+                ? `https://image.tmdb.org/t/p/w500/${selectedMovie.poster_path}`
+                : '/no-movie.png'}
+              alt={selectedMovie.title}
+            />
+            <div>
+              <h2 id="movie-modal-title">{selectedMovie.title}</h2>
+              <p>{selectedMovie.overview || 'No overview available.'}</p>
+              <p>
+                Rating: {selectedMovie.vote_average
+                  ? selectedMovie.vote_average.toFixed(1)
+                  : 'N/A'}
+              </p>
+              <p>Release date: {selectedMovie.release_date || 'N/A'}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
 
      </main>

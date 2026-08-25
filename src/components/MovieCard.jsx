@@ -1,6 +1,16 @@
-const MovieCard = ({movie: { title, vote_average, poster_path, release_date, original_language }}) => {
+const MovieCard = ({ movie, onSelect }) => {
+    const { title, vote_average, poster_path, release_date, original_language } = movie
+
   return (
-    <div className="movie-card">
+        <div
+                className="movie-card"
+                onClick={() => onSelect(movie)}
+                onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') onSelect(movie)
+                }}
+                role="button"
+                tabIndex={0}
+        >
         <img 
             src={poster_path ? 
                 `https://image.tmdb.org/t/p/w500/${poster_path}` : '/no-movie.png'}
