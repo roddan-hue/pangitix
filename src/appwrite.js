@@ -15,7 +15,6 @@ export const updateSearchCount = async (searchTerm, movie) => {
     //1. check appwrite if the search already exists in the database
         // a. if it does ExecutionStatus, update the Count
         // b. if it doesn,t create a new record with the search term and count as 1.
-    console.log(PROJECT_ID, DATABASE_ID, TABLE_NAME);
 
     try {
         const result = await database.listDocuments(DATABASE_ID, TABLE_NAME, [

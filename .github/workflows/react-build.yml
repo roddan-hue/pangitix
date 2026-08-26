@@ -1,0 +1,98 @@
+name: Movie App React Build
+
+on:
+  push:
+    branches: [ "dev", "main" ]
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+    inputs:
+        branch:
+            description: "Branch to build"
+            required: true
+            default: "main"
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        if: >
+            (github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')) ||
+            (github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main') || (github.event_name == 'workflow_dispatch')
+
+        steps:
+            - name: 1. Checkout
+              uses: actions/checkout@v5
+              with:
+                ref: ${{ github.event.inputs.branch || github.ref }}
+
+            - name: 2. Setup Node.js
+              uses: actions/setup-node@v5
+              with:
+                node-version: 22
+                cache: 'npm'
+                cache-dependency-path: package-lock.json
+
+            - name: 3. Check Node version
+              run: node -v
+
+            - name: 4. Install dependencies
+              run: npm ci
+
+            #   - name: 5. Run tests
+            #     run: npm run test:ci
+
+            - name: 6. Build React app
+              run: npm run build
+
+            - name: 7. Upload build artifact
+              uses: actions/upload-artifact@v5
+              with:
+                name: dist
+                path: dist/portfolio-website/browser
+                retention-days: 7
+
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+            contents: read
+        if: > 
+            github.event_name == 'workflow_dispatch' ||
+            (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        environment:
+            name: production
+            url: https://movies.bossrod.com
+
+        steps:
+        - name: 1. Checkout
+          uses: actions/checkout@v5
+          with:
+            ref: ${{ github.event.inputs.branch || github.ref }}
+
+        - name: 2. Configure AWS credentials
+          uses: aws-actions/configure-aws-credentials@v6
+          with:
+            role-to-assume: ${{ secrets.AWS_ASSUME_ROLE_ARN }}
+            aws-region: ${{ secrets.AWS_REGION }}
+        
+        - name: 3. Download build artifact
+          uses: actions/download-artifact@v4
+          with:
+            name: dist
+            path: dist/portfolio-website/browser
+
+        - name: 4. List build files
+          run: ls -laR dist || true
+
+        - name: 5. Sync build to S3
+          run: |
+            aws s3 sync dist/portfolio-website/browser s3://${{ secrets.S3_BUCKET }} --acl bucket-owner-full-control --delete
+
+        - name: 6. Invalidate CloudFront
+          run: |
+            aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"

@@ -1,4 +1,6 @@
-const MovieCard = ({ movie, onSelect }) => {
+import { memo } from 'react'
+
+const MovieCard = memo(({ movie, onSelect }) => {
     const { title, vote_average, poster_path, release_date, original_language } = movie
 
   return (
@@ -38,6 +40,6 @@ const MovieCard = ({ movie, onSelect }) => {
         </div>
     </div>
   )
-}
+})
 
 export default MovieCard

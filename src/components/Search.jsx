@@ -1,4 +1,6 @@
-const Search = ({ searchTerm, setSearchTerm }) => {
+import { memo } from 'react'
+
+const Search = memo(({ searchTerm, setSearchTerm }) => {
   return (
     <div className="search">
         <div>
@@ -13,6 +15,6 @@ const Search = ({ searchTerm, setSearchTerm }) => {
         </div>
     </div>
   )
-}
+})
 
 export default Search
