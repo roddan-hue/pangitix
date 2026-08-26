@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import Search from './components/Search.jsx'
 import Spinner from './components/Spinner.jsx'
 import MovieCard from './components/MovieCard.jsx';
+import PopupCard from './components/PopupCard.jsx';
 import { useDebounce } from 'react-use';
 import { getTrendingMovies, updateSearchCount } from './appwrite.js';
 
-  const API_BASE_URL = import.meta.env.VITE_TMDB_API_ENDPOINT;
+  // const API_BASE_URL = import.meta.env.VITE_TMDB_API_ENDPOINT;
+  const API_BASE_URL = import.meta.env.VITE_API_BOSSROD;
   // const API_BASE_URL = 'https://api.themoviedb.org/3';
   // const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
@@ -30,7 +32,7 @@ const App = () => {
   // by waiting for the user to stop typing for 500ms
   useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
 
-  const fetchMovies = async ( query = '') => {
+  const fetchMovies = async ( query = '', signal) => {
     setIsLoading(true);
     setErrorMessage(''); // Clear any previous error messages
 
@@ -39,30 +41,32 @@ const App = () => {
         ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
         : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
 
-      const response = await fetch(endpoint, API_OPTIONS);
+      const response = await fetch(endpoint, { ...API_OPTIONS, signal });
       
       if(!response.ok) {
         throw new Error('Failed to fetch movies');
       }
 
       const data = await response.json();
-      
+      const results = data.results || [];
+
       if(data.Response === 'False') {
         setErrorMessage(data.Error || 'Error fetching movies. Please try again.');
         setMovieList([]);
         return;
       } 
-      setMovieList(data.results || []);
+      setMovieList(results);
       
-      if(query && data.results.length > 0) {
-        await updateSearchCount(query, data.results[0]);
+      if(query && results.length > 0) {
+        await updateSearchCount(query, results[0]);
       }
       
     } catch (error) {
+      if (error.name === 'AbortError') return; // stale request cancelled, ignore
       setErrorMessage('Error fetching movies. Please try again.');
       console.error('Error fetching movies:', error);
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
   };
 
@@ -77,7 +81,9 @@ const App = () => {
   }
 
   useEffect(() => {
-    fetchMovies(debouncedSearchTerm);
+    const controller = new AbortController();
+    fetchMovies(debouncedSearchTerm, controller.signal);
+    return () => controller.abort();
   }, [debouncedSearchTerm]);
 
   useEffect(() => {
@@ -132,38 +138,7 @@ const App = () => {
 
       {selectedMovie && (
         <div className="movie-modal" onClick={() => setSelectedMovie(null)}>
-          <div
-            className="movie-modal-content"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="movie-modal-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              className="movie-modal-close"
-              type="button"
-              onClick={() => setSelectedMovie(null)}
-              aria-label="Close movie details"
-            >
-              &times;
-            </button>
-            <img
-              src={selectedMovie.poster_path
-                ? `https://image.tmdb.org/t/p/w500/${selectedMovie.poster_path}`
-                : '/no-movie.png'}
-              alt={selectedMovie.title}
-            />
-            <div>
-              <h2 id="movie-modal-title">{selectedMovie.title}</h2>
-              <p>{selectedMovie.overview || 'No overview available.'}</p>
-              <p>
-                Rating: {selectedMovie.vote_average
-                  ? selectedMovie.vote_average.toFixed(1)
-                  : 'N/A'}
-              </p>
-              <p>Release date: {selectedMovie.release_date || 'N/A'}</p>
-            </div>
-          </div>
+          <PopupCard movie={selectedMovie} onClose={() => setSelectedMovie(null)} />
         </div>
       )}
     </div>
