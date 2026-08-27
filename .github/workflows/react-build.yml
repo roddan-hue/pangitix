@@ -52,7 +52,7 @@ jobs:
               uses: actions/upload-artifact@v5
               with:
                 name: dist
-                path: dist/portfolio-website/browser
+                path: dist
                 retention-days: 7
 
     deploy:
