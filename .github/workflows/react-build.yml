@@ -84,14 +84,14 @@ jobs:
           uses: actions/download-artifact@v4
           with:
             name: dist
-            path: dist/portfolio-website/browser
+            path: dist
 
         - name: 4. List build files
           run: ls -laR dist || true
 
         - name: 5. Sync build to S3
           run: |
-            aws s3 sync dist/portfolio-website/browser s3://${{ secrets.S3_BUCKET }} --acl bucket-owner-full-control --delete
+            aws s3 sync dist s3://${{ secrets.S3_BUCKET }} --acl bucket-owner-full-control --delete
 
         - name: 6. Invalidate CloudFront
           run: |
