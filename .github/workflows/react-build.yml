@@ -88,10 +88,17 @@ jobs:
 
         - name: 4. List build files
           run: ls -laR dist || true
+        
+        - name: Debug AWS deploy values
+          run: |
+            echo "AWS_REGION=${{ secrets.AWS_REGION }}"
+            echo "S3_BUCKET=${{ secrets.S3_BUCKET }}"
+            echo "CLOUDFRONT_DISTRIBUTION_ID=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
 
         - name: 5. Sync build to S3
           run: |
-            aws s3 sync dist s3://${{ secrets.S3_BUCKET }} --acl bucket-owner-full-control --delete
+            BUCKET="$(printf '%s' '${{ secrets.S3_BUCKET }}' | tr -d '\r\n[:space:]')"
+            aws s3 sync dist "s3://${BUCKET}" --acl bucket-owner-full-control --delete
 
         - name: 6. Invalidate CloudFront
           run: |
